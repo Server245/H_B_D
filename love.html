@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surprise Letter & Cake</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #fdf2f8; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Animation: ไฟกระพริบ */
+        @keyframes flicker {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            25% { transform: scale(1.1) rotate(-2deg); opacity: 1; }
+            50% { transform: scale(0.9) rotate(2deg); opacity: 0.8; }
+            75% { transform: scale(1.05) rotate(-1deg); opacity: 1; }
+        }
+        .flame-animate {
+            animation: flicker 1.5s infinite ease-in-out;
+            transform-origin: bottom center;
+        }
+
+        /* Animation: ข้อความเฟด */
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .message-animate {
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Animation: ซองจดหมายลอยขึ้น */
+        @keyframes envelopePopUp {
+            0% { transform: translateY(0) scale(0.8); opacity: 0; }
+            100% { transform: translateY(-120px) scale(1); opacity: 1; }
+        }
+        .envelope-enter {
+            animation: envelopePopUp 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Animation: ซองจดหมายลอยดึ๋งๆ */
+        @keyframes float {
+            0%, 100% { transform: translateY(-120px) rotate(0deg); }
+            50% { transform: translateY(-130px) rotate(2deg); }
+        }
+        .envelope-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Animation: กระดาษจดหมายขยาย */
+        @keyframes letterExpand {
+            0% { transform: scale(0.1) translateY(100px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .letter-content-enter {
+            animation: letterExpand 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ข้อความ (0-7) ---
+        const MESSAGES = [
+            "แตะที่เค้กสิอ้วน",           // 0
+            "ปักอีก",                 // 1
+            "อีกก",                  // 2
+            "อีกนิดอ้วนน",              // 3
+            "ใกล้แล้วอ้วน",             // 4
+            "เย้!! อธิษฐานแล้วเป่าเลยอ้วน", // 5 (รอเป่า)
+            "ฟู่ววว~ ยังเหลืออีกอัน",     // 6 (เป่าครั้งแรก)
+        ];
+
+        // --- เนื้อหาในจดหมาย ---
+        const LETTER_CONTENT = {
+            header: "สุขสันต์วันเกิดนะอ้วนน...",
+            body: "อ้วนอายุเพิ่มขึ้นอีกปีแล้วนะครับแต่อ้วนก็ยังน่ารักสำหรับเค้าเหมือนเดิมเค้าขอให้อ้วนมีความสุขยิ้มเยอะๆขอให้อ้วนหายเหนื่อยมีแรงกายแรงใจพร้อมสู้กับทุกเรื่องที่เข้ามานะครับขอให้อ้วนสุขภาพแข็งแรงและขอให้เค้าอยู่ข้างๆอ้วนในทุกวันเกิดต่อจากนี้ไปนะครับเค้ารักอ้วนที่สุดดดดดสุขสันต์วันเกิดนะครับ🎂♥️♥️",
+            footer: "จาก... เค้าเอง"
+        };
+
+        const MAX_CANDLES = 5;
+
+        // --- Candle Component ---
+        function Candle({ isLit }) {
+            return (
+                <div className="relative -mt-8 pointer-events-none transition-transform duration-300">
+                    <div className={`absolute -top-4 left-1/2 -translate-x-1/2 origin-bottom z-20 transition-opacity duration-700 
+                        ${isLit ? 'opacity-100 flame-animate' : 'opacity-0'}
+                    `}>
+                        <div className="w-3 h-5 bg-gradient-to-t from-orange-500 via-yellow-400 to-yellow-100 rounded-[50%_50%_50%_50%_/_60%_60%_40%_40%] blur-[1px] shadow-[0_0_10px_rgba(255,165,0,0.6)]"></div>
+                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-2.5 bg-white rounded-full blur-[0.5px] opacity-70"></div>
+                    </div>
+                    <div className="w-0.5 h-2 bg-gray-800 mx-auto relative -top-0.5 z-10"></div>
+                    <div className="relative z-10 w-3 h-12 bg-gradient-to-b from-pink-300 to-pink-500 rounded-sm shadow-sm border-b-2 border-pink-600/30 mx-auto">
+                        <div className="w-full h-full opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,rgba(255,255,255,0.3)_5px,rgba(255,255,255,0.3)_10px)]"></div>
+                    </div>
+                    <div className="w-4 h-1.5 bg-pink-600/50 rounded-full -mt-1 mx-auto blur-[1px]"></div>
+                </div>
+            );
+        }
+
+        // --- Envelope Component ---
+        function Envelope({ onClick }) {
+            return (
+                <div 
+                    className="absolute top-1/2 left-1/2 -ml-16 -mt-10 w-32 h-24 cursor-pointer z-0 envelope-enter envelope-float hover:scale-110 transition-transform"
+                    onClick={(e) => { e.stopPropagation(); onClick(); }}
+                >
+                    <div className="absolute bottom-0 w-full h-full bg-pink-400 rounded-md shadow-lg overflow-hidden border-2 border-pink-500">
+                        <div className="absolute bottom-0 left-0 w-0 h-0 border-l-[64px] border-l-transparent border-r-[64px] border-r-transparent border-b-[48px] border-b-pink-300"></div>
+                    </div>
+                    <div className="absolute top-0 left-0 w-full h-0 border-l-[64px] border-l-transparent border-r-[64px] border-r-transparent border-t-[48px] border-t-pink-500 origin-top opacity-90"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-2 text-2xl animate-pulse">💌</div>
+                    <div className="absolute -top-8 w-full text-center text-xs font-bold text-pink-500 bg-white/80 px-2 py-1 rounded-full animate-bounce">
+                        เปิดสิ!
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Letter Paper Component ---
+        function LetterPaper({ onClose }) {
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm letter-content-enter">
+                    <div className="relative max-w-sm w-full bg-[#fffcf5] p-8 rounded-xl shadow-2xl border border-pink-200 transform rotate-1">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onClose(); }}
+                            className="absolute top-2 right-3 text-pink-300 hover:text-pink-500 text-2xl"
+                        >
+                            &times;
+                        </button>
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold text-pink-600 mb-4 font-serif">{LETTER_CONTENT.header}</h2>
+                            <div className="h-0.5 w-16 bg-pink-200 mx-auto mb-6"></div>
+                            <p className="text-gray-600 leading-relaxed mb-8 text-lg font-serif">{LETTER_CONTENT.body}</p>
+                            <p className="text-pink-500 font-semibold text-right italic font-serif">{LETTER_CONTENT.footer}</p>
+                        </div>
+                        <div className="absolute -top-3 -left-3 text-4xl transform -rotate-12">🎀</div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Main App ---
+        function InteractiveCake() {
+            const [candleCount, setCandleCount] = useState(0); 
+            const [blowState, setBlowState] = useState(0); 
+            const [envelopeVisible, setEnvelopeVisible] = useState(false);
+            const [letterOpen, setLetterOpen] = useState(false);
+
+            const handleTouch = () => {
+                if (letterOpen) return;
+
+                if (candleCount < MAX_CANDLES) {
+                    setCandleCount(prev => prev + 1);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                } else {
+                    if (blowState === 0) {
+                        setBlowState(1);
+                        if (navigator.vibrate) navigator.vibrate(100);
+                    } else if (blowState === 1) {
+                        setBlowState(2);
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        
+                        setTimeout(() => {
+                            setEnvelopeVisible(true);
+                        }, 1000);
+                    }
+                }
+            };
+
+            const candlesPlaceholder = Array.from({ length: MAX_CANDLES });
+            const centerIndex = Math.floor(MAX_CANDLES / 2);
+
+            const shouldLightBeOn = (index) => {
+                if (blowState === 2) return false;
+                if (blowState === 1) return index === centerIndex;
+                return true;
+            };
+
+            const getMessage = () => {
+                if (candleCount < MAX_CANDLES) return MESSAGES[candleCount];
+                if (blowState === 0) return MESSAGES[5];
+                if (blowState === 1) return MESSAGES[6];
+                return MESSAGES[7];
+            };
+
+            const isFinalStep = blowState === 2;
+
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen w-full bg-pink-50/30 p-4 select-none overflow-hidden font-sans relative">
+                    
+                    {/* Layer 1: Envelope (หลังเค้ก) */}
+                    {envelopeVisible && !letterOpen && (
+                        <Envelope onClick={() => setLetterOpen(true)} />
+                    )}
+
+                    <div className="h-12"></div>
+
+                    {/* Layer 2: Cake */}
+                    {/* เพิ่ม class translate-y-24 เมื่อ envelopeVisible เป็นจริง เพื่อเลื่อนเค้กลง */}
+                    <div 
+                        className={`relative w-80 h-80 transition-all duration-1000 z-10
+                            ${!isFinalStep ? 'cursor-pointer active:scale-95' : ''}
+                            ${letterOpen ? 'blur-sm grayscale opacity-50' : ''}
+                            ${envelopeVisible ? 'translate-y-24' : ''} 
+                        `}
+                        onClick={handleTouch}
+                    >
+                        <div className="absolute top-0 left-0 w-full h-full z-20 pointer-events-none">
+                            <div className="relative top-[40px] w-[160px] mx-auto flex justify-between items-end h-24">
+                                {candlesPlaceholder.map((_, index) => (
+                                    <div key={index} className="relative w-6 flex justify-center">
+                                        {index < candleCount && (
+                                            <Candle isLit={shouldLightBeOn(index)} />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <svg viewBox="0 0 320 320" className="w-full h-full drop-shadow-xl hover:drop-shadow-2xl z-10 transition-all duration-300">
+                            <ellipse cx="160" cy="260" rx="140" ry="25" fill="#d1d5db" />
+                            <ellipse cx="160" cy="255" rx="140" ry="25" fill="#e5e7eb" />
+                            <ellipse cx="160" cy="230" rx="115" ry="18" fill="#f9a8d4" opacity="0.5" />
+                            <rect x="45" y="170" width="230" height="60" fill="#f472b6" />
+                            <path d="M 45 195 Q 65 190 85 195 T 125 195 T 165 195 T 205 195 T 245 195 T 275 195" stroke="#ffffff" strokeWidth="2" fill="none" />
+                            <path d="M 45 230 Q 55 238 65 230 Q 75 238 85 230 Q 95 238 105 230 Q 115 238 125 230 Q 135 238 145 230 Q 155 238 165 230 Q 175 238 185 230 Q 195 238 205 230 Q 215 238 225 230 Q 235 238 245 230 Q 270 238 275 230" fill="#fef3f4" />
+                            <ellipse cx="160" cy="170" rx="115" ry="18" fill="#f9a8d4" />
+                            <line x1="45" y1="185" x2="275" y2="185" stroke="#ffffff" strokeWidth="2" />
+                            <rect x="60" y="115" width="200" height="55" fill="#fef9f3" />
+                            <path d="M 60 115 Q 70 108 80 115 Q 90 108 100 115 Q 110 108 120 115 Q 130 108 140 115 Q 150 108 160 115 Q 170 108 180 115 Q 190 108 200 115 Q 210 108 220 115 Q 230 108 240 115 Q 250 108 260 115" stroke="#f5e6d3" strokeWidth="3" fill="none" />
+                            <path d="M 60 170 Q 70 178 80 170 Q 90 178 100 170 Q 110 178 120 170 Q 130 178 140 170 Q 150 178 160 170 Q 170 178 180 170 Q 190 178 200 170 Q 210 178 220 170 Q 230 178 240 170 Q 250 178 260 170" fill="#fef9f3" />
+                            <ellipse cx="160" cy="115" rx="100" ry="15" fill="#fef3f4" />
+                            <path d="M 65 112 Q 75 106 85 112 Q 95 106 105 112 Q 115 106 125 112 Q 135 106 145 112 Q 155 106 165 112 Q 175 106 185 112 Q 195 106 205 112 Q 215 106 225 112 Q 235 106 245 112 Q 253 106 258 112" stroke="#e8d4bf" strokeWidth="2" fill="none" />
+                        </svg>
+                    </div>
+
+                    {/* ข้อความใต้เค้ก */}
+                    <div className={`mt-8 min-h-[80px] w-full flex flex-col items-center justify-start px-4 z-10 transition-all duration-1000 ${envelopeVisible ? 'translate-y-24' : ''}`}>
+                        <div key={getMessage()} className="text-center message-animate">
+                            <p className={`font-bold text-pink-600 transition-all cursor-default
+                                ${isFinalStep ? "text-3xl drop-shadow-sm" : "text-xl"}
+                            `}>
+                                {getMessage()}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Layer 3: Letter Overlay (หน้าสุด) */}
+                    {letterOpen && (
+                        <LetterPaper onClose={() => setLetterOpen(false)} />
+                    )}
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<InteractiveCake />);
+    </script>
+</body>
+</html>
